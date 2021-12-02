@@ -14,7 +14,7 @@ fn main() -> std::io::Result<()> {
 }
 
 fn star1() -> std::io::Result<()> {
-    let mut input = File::open("../../sonar-depths-official.txt")?;
+    let mut input = File::open("../sonar-depths-official.txt")?;
     let mut input_buffer = String::new();
     input.read_to_string(&mut input_buffer)?;
 
@@ -62,7 +62,7 @@ fn star1() -> std::io::Result<()> {
 }
 
 fn star1_improved() -> std::io::Result<()> {
-    let mut input = File::open("../../sonar-depths-official.txt")?;
+    let mut input = File::open("../sonar-depths-official.txt")?;
     let mut input_buffer = String::new();
     input.read_to_string(&mut input_buffer)?;
 
@@ -108,7 +108,7 @@ fn star1_improved() -> std::io::Result<()> {
 
 
 fn star2() -> std::io::Result<()> {
-    let mut input = File::open("../../sonar-depths-official.txt")?;
+    let mut input = File::open("../sonar-depths-official.txt")?;
     let mut input_buffer = String::new();
     input.read_to_string(&mut input_buffer)?;
 
@@ -172,7 +172,7 @@ fn star2() -> std::io::Result<()> {
 }
 
 fn star2_improved() -> std::io::Result<()> {
-    let mut input = File::open("../../sonar-depths-official.txt")?;
+    let mut input = File::open("../sonar-depths-official.txt")?;
     let mut input_buffer = String::new();
     input.read_to_string(&mut input_buffer)?;
 
