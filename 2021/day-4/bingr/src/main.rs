@@ -60,7 +60,9 @@ impl Board {
 
             let mut col_all_marked = true;
             for row_squares in self.squares.chunks(5) {    
+                println!("   {}", row_squares[col].number);
                 if row_squares[col].marked == false {
+                    println!("   {} of column {} was not marked, killing it", row_squares[col].number, col);
                     col_all_marked = false;
                 }
             }
@@ -76,15 +78,16 @@ impl Board {
 
     /// Mark our matching squares, if any. Returns true if one is found.
     fn mark_number_called(&mut self, number:u32) -> bool {
+        let mut marked = false;
         for i in 0..self.squares.len() {
             let mut square = &mut self.squares[i];
             if square.number == number {
                 square.marked = true;
-                return true; // Repeating numbers aren't allowed
+                marked = true; // Repeating numbers shouldn't be allowed but we fail gracefully
             }
         }
 
-        false
+        marked
     }
 
     /// Calculate the sum of all unmarked numbers (e.g. the numbers that were not called yet)
@@ -135,7 +138,7 @@ impl Game {
     fn play(&mut self) -> Option<usize> {
         for i in 0..self.numbers.len() {
             let number = self.numbers[i];
-            println!("Step #{} of the game is now calling number {}", i, number);
+            println!("📣📣📣📣 CALLING – Step #{} of the game is now calling number {}", i, number);
 
             self.mark_number_called(number);
 
@@ -206,7 +209,7 @@ fn star2() -> std::io::Result<()> {
 
 #[cfg(test)]
 mod test {
-    const INPUT: &str = r#"7,4,9,5,11,17,23,2,0,14,21,24,10,16,13,6,15,25,12,22,18,20,8,19,3,26,1
+    const INPUT_OFFICIAL_TEST: &str = r#"7,4,9,5,11,17,23,2,0,14,21,24,10,16,13,6,15,25,12,22,18,20,8,19,3,26,1
 
 22 13 17 11  0
  8  2 23  4 24
@@ -226,9 +229,70 @@ mod test {
 22 11 13  6  5
 2  0 12  3  7"#;
 
+const INPUT_SHUFFLED_TEST: &str = r#"7,4,9,5,11,17,23,2,0,14,21,24,10,16,13,6,15,25,12,22,18,20,8,19,3,26,1
+
+10 16 15  9 19
+18  8 23 26 20
+22 11 13  6  5
+2  0 12  3  7
+21 17 24  04 14 
+
+22 13 17 11  0
+ 8  2 23  4 24
+21  9 14 16  7
+ 6 10  3 18  5
+ 1 12 20 15 19
+
+ 3 15  0  2 22
+ 9 18 13 17  5
+19  8  7 25 23
+20 11 10 24  4
+14 21 16 12  6"#;
+
+const INPUT_ROW_WINNER_TEST: &str = r#"7,4,9,5,11,17,23,2,0,14,21,24,10,16,13,6,15,25,12,22,18,20,8,19,3,26,1
+
+ 7  4  9  5 11
+18  8 23 26 20
+22 11 13  6  5
+2  0 12  3  7
+21 17 24  04 14 
+
+22 13 17 11  0
+ 8  2 23  4 24
+21  9 14 16  7
+ 6 10  3 18  5
+ 1 12 20 15 19
+
+ 3 15  0  2 22
+ 9 18 13 17  5
+19  8  7 25 23
+20 11 10 24  4
+14 21 16 12  6"#;
+
+
+const INPUT_COL_WINNER_TEST: &str = r#"7,4,9,5,11,17,23,2,0,14,21,24,10,16,13,6,15,25,12,22,18,20,8,19,3,26,1
+
+71  4  9  5  7
+18  8 23 26  4
+22 11 13  6  9
+2   0 12  3  5
+21 17 24  4 11 
+
+ 7 13 17 11  0
+ 4  2 23  4 24
+ 9  9 14 16  7
+ 5 10  3 18  5
+17 12 20 15 19
+
+ 3 15  0  2 22
+ 9 18 13 17  5
+19  8  7 25 23
+20 11 10 24  4
+14 21 16 12  6"#;
+
     #[test]
-    fn parse_game_setup() {
-        let game = super::Game::parse_game_setup(INPUT);
+    fn play_game_1_official_data() {
+        let mut game = super::Game::parse_game_setup(INPUT_OFFICIAL_TEST);
 
         assert_eq!(game.numbers.len(), 27);
         assert_eq!(game.boards.len(), 3);
@@ -240,11 +304,7 @@ mod test {
         assert_eq!(game.boards[0].sum_unmarked_numbers(), 300);
         assert_eq!(game.boards[1].sum_unmarked_numbers(), 324);
         assert_eq!(game.boards[2].sum_unmarked_numbers(), 325);
-    }
 
-    #[test]
-    fn play_star1() {
-        let mut game = super::Game::parse_game_setup(INPUT);
         let winner_idx = game.play();
 
         assert!(winner_idx.is_some(), "There must be a winner or the players get angry");
@@ -252,5 +312,33 @@ mod test {
         let winning_board = &game.boards[winner_idx.unwrap()];
         assert_eq!(winning_board.sum_unmarked_numbers(), 188);
         assert_eq!(winning_board.score(), 4512);
+    }
+
+    #[test]
+    fn play_game_1_shuffled_data() {
+        let mut game = super::Game::parse_game_setup(INPUT_SHUFFLED_TEST);
+        let winner_idx = game.play();
+
+        assert!(winner_idx.is_some(), "There must be a winner or the players get angry");
+
+        let winning_board = &game.boards[winner_idx.unwrap()];
+        assert_eq!(winning_board.sum_unmarked_numbers(), 188);
+        assert_eq!(winning_board.score(), 4512);
+    }
+
+    #[test]
+    fn play_game_1_row_winner() {
+        let mut game = super::Game::parse_game_setup(INPUT_ROW_WINNER_TEST);
+        let winner_idx = game.play().unwrap();
+
+        assert_eq!(winner_idx, 0);
+    }
+
+    #[test]
+    fn play_game_1_col_winner() {
+        let mut game = super::Game::parse_game_setup(INPUT_COL_WINNER_TEST);
+        let winner_idx = game.play().unwrap();
+
+        assert_eq!(winner_idx, 1);
     }
 }
