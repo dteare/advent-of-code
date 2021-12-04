@@ -22,59 +22,119 @@ struct Board {
 }
 
 #[derive (Debug)]
-struct GameSetup {
+/// Game is the setup for the entire _room_. All players, boards, and the numbers to be called. 
+struct Game {
     numbers: Vec<u32>,
     boards: Vec<Board>,
 }
 
-impl GameSetup {
-    fn as_string(&self) -> String {
-        format!("Numbers: {}", self.numbers.len())
+impl Board {
+    /// Calculate the score of the winning board
+    fn score(&self) -> u32 {
+        0
     }
-}
 
-fn parse_game_setup(setup: &str) -> GameSetup {
-    let mut lines: Vec<&str> = setup.split('\n').collect();
+    /// Look for a winning condition. Note that only horizontal and vertical rows are considered (no diagonals)
+    fn is_winner(&self) -> bool {
+        false
+    }
 
-    // First line is a comma-separated list of numbers, in the order to be called
-    let numbers_csv = lines.remove(0);
-    let numbers: Vec<u32> = numbers_csv.split(",").map(|v| v.parse::<u32>().unwrap()).collect();
-
-    assert_eq!(lines.len() % 6, 0, "Each board must consist of 5 lines with 1 leading newline");
-
-    let mut boards:Vec<Board> = Vec::new();
-    for (count, seed) in lines.chunks(6).enumerate() {
-        assert_eq!(seed[0], "","Expected first line of board {} to be empty: <{}>", count, seed[0]);
-    
-        let mut squares:Vec<Square> = Vec::new();
-        println!("Parsing board #{}", count);
-        for (i, line) in seed.iter().skip(1).enumerate() {
-            println!("    Line {} = {}", i, line);
-            for n in line.split_whitespace() {
-
-                println!("   n={}", n);
-                let square = Square{number:n.parse::<u32>().unwrap(), called:false};
-                squares.push(square);
+    /// Mark our matching squares, if any. Returns true if one is found.
+    fn mark_number_called(&mut self, number:u32) -> bool {
+        for i in 0..self.squares.len() {
+            let mut square = &mut self.squares[i];
+            if square.number == number {
+                square.called = true;
+                return true; // Repeating numbers aren't allowed
             }
         }
 
-        boards.push(Board{squares});
+        false
     }
-
-    GameSetup{numbers, boards}
 }
 
-fn load_game_setup(file_name: &str) -> GameSetup {
+impl Game {
+    fn parse_game_setup(setup: &str) -> Game {
+        let mut lines: Vec<&str> = setup.split('\n').collect();
+    
+        // First line is a comma-separated list of numbers, in the order to be called
+        let numbers_csv = lines.remove(0);
+        let numbers: Vec<u32> = numbers_csv.split(",").map(|v| v.parse::<u32>().unwrap()).collect();
+    
+        assert_eq!(lines.len() % 6, 0, "Each board must consist of 5 lines with 1 leading newline");
+    
+        let mut boards:Vec<Board> = Vec::new();
+        for (count, seed) in lines.chunks(6).enumerate() {
+            assert_eq!(seed[0], "","Expected first line of board {} to be empty: <{}>", count, seed[0]);
+        
+            let mut squares:Vec<Square> = Vec::new();
+            println!("Parsing board #{}", count);
+            for (i, line) in seed.iter().skip(1).enumerate() {
+                println!("    Line {} = {}", i, line);
+                for n in line.split_whitespace() {
+    
+                    println!("   n={}", n);
+                    let square = Square{number:n.parse::<u32>().unwrap(), called:false};
+                    squares.push(square);
+                }
+            }
+    
+            boards.push(Board{squares});
+        }
+    
+        Game{numbers, boards}
+    }
+
+    // Plays the game by calling each number in turn, and checking for a winner after each pass. Returns the index of the winning Board, if any.
+    fn play(&mut self) -> Option<usize> {
+        for i in 0..self.numbers.len() {
+            let number = self.numbers[i];
+            println!("Step #{} of the game is now calling number {}", i, number);
+
+            self.mark_number_called(number);
+
+            let winner_idx = self.check_for_winner();
+            match winner_idx {
+                Some(idx) => {
+                    println!("Winner!");
+                    return Some(idx);
+                }
+                None => {
+                    println!("No winners yet!");
+                }
+            }
+        }
+
+        None
+    }
+
+    fn mark_number_called(&mut self, number:u32) {
+        for i in 0..self.boards.len() {
+            let board = &mut self.boards[i];
+            let marked = board.mark_number_called(number);
+            if marked {
+                println!("Marked! Board {} had a match for {}", i, number);
+            }
+        }
+    }
+
+    fn check_for_winner(&self) -> Option<usize> {
+        None
+    }
+}
+
+
+fn load_game_from_file(file_name: &str) -> Game {
     let mut input = File::open(file_name).unwrap();
     let mut input_buffer = String::new();
     input.read_to_string(&mut input_buffer).unwrap();
-    parse_game_setup(input_buffer.as_str())
+    Game::parse_game_setup(input_buffer.as_str())
 }
 
 fn star1() -> std::io::Result<()> {
-    let game = load_game_setup("../bingo-test.txt");
+    let game = load_game_from_file("../bingo-test.txt");
 
-    println!("Game setup: {}", game.as_string());
+    println!("Game setup has {} numbers to call and {} boards", game.numbers.len(), game.boards.len());
 
     // let answer = horiz_position * depth;
 
@@ -115,7 +175,7 @@ mod test {
 
     #[test]
     fn parse_game_setup() {
-        let game = super::parse_game_setup(INPUT);
+        let game = super::Game::parse_game_setup(INPUT);
 
         assert_eq!(game.numbers.len(), 27);
         assert_eq!(game.boards.len(), 3);
@@ -123,5 +183,15 @@ mod test {
         for (i, board) in game.boards.iter().enumerate() {
             assert_eq!(board.squares.len(), 25, "Board {} does not have 25 squares", i)
         }
+    }
+
+    #[test]
+    fn play() {
+        let mut game = super::Game::parse_game_setup(INPUT);
+        let winner_idx = game.play();
+
+        assert!(winner_idx.is_some(), "There must be a winner or the players get angry");
+
+        assert_eq!(game.boards[winner_idx.unwrap()].score(), 4512);
     }
 }
