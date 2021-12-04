@@ -13,7 +13,7 @@ fn main() -> std::io::Result<()> {
 #[derive (Debug)]
 struct Square {
     number: u32,
-    called: bool,
+    marked: bool,
 }
 
 #[derive (Debug)]
@@ -31,11 +31,46 @@ struct Game {
 impl Board {
     /// Calculate the score of the winning board
     fn score(&self) -> u32 {
-        0
+        self.sum_unmarked_numbers() * 24
     }
 
     /// Look for a winning condition. Note that only horizontal and vertical rows are considered (no diagonals)
     fn is_winner(&self) -> bool {
+
+        // Check rows
+        for (row, squares) in self.squares.chunks(5).enumerate() {
+            println!("Checking row {}: [{}, {}, {}, {}, {}]", row, squares[0].number, squares[1].number, squares[2].number, squares[3].number, squares[4].number);
+
+            let mut row_all_marked = true;
+            for i in 0..squares.len() {
+                if squares[i].marked == false {
+                    row_all_marked = false;
+                }
+            }
+
+            if row_all_marked {
+                println!("🎉 Winner winner! Chicken dinner! Row {} is complete.", row);
+                return true;
+            }
+        }
+
+        // Check columns
+        for col in 0..5 {
+            println!("Checking column {}", col);
+
+            let mut col_all_marked = true;
+            for row_squares in self.squares.chunks(5) {    
+                if row_squares[col].marked == false {
+                    col_all_marked = false;
+                }
+            }
+
+            if col_all_marked {
+                println!("🎉 Winner winner! Chicken dinner! Column {} is complete.", col);
+                return true;
+            }
+        }
+
         false
     }
 
@@ -44,12 +79,23 @@ impl Board {
         for i in 0..self.squares.len() {
             let mut square = &mut self.squares[i];
             if square.number == number {
-                square.called = true;
+                square.marked = true;
                 return true; // Repeating numbers aren't allowed
             }
         }
 
         false
+    }
+
+    /// Calculate the sum of all unmarked numbers (e.g. the numbers that were not called yet)
+    fn sum_unmarked_numbers(&self) -> u32 {
+        let mut sum = 0;
+        for square in self.squares.iter() {
+            if !square.marked {
+                sum += square.number;
+            }
+        }
+        return sum;
     }
 }
 
@@ -68,13 +114,13 @@ impl Game {
             assert_eq!(seed[0], "","Expected first line of board {} to be empty: <{}>", count, seed[0]);
         
             let mut squares:Vec<Square> = Vec::new();
-            println!("Parsing board #{}", count);
-            for (i, line) in seed.iter().skip(1).enumerate() {
-                println!("    Line {} = {}", i, line);
+//            println!("Parsing board #{}", count);
+            for (_, line) in seed.iter().skip(1).enumerate() {
+//                println!("    Line {} = {}", i, line);
                 for n in line.split_whitespace() {
     
-                    println!("   n={}", n);
-                    let square = Square{number:n.parse::<u32>().unwrap(), called:false};
+//                    println!("   n={}", n);
+                    let square = Square{number:n.parse::<u32>().unwrap(), marked:false};
                     squares.push(square);
                 }
             }
@@ -118,7 +164,14 @@ impl Game {
         }
     }
 
+    /// See if there are any winning boards. Simplifying assumption that there are no ties. Ties are left as an exercise for the reader.
     fn check_for_winner(&self) -> Option<usize> {
+        for (i, board) in self.boards.iter().enumerate() {
+            if board.is_winner() {
+                return Some(i);
+            }
+        }
+
         None
     }
 }
@@ -132,15 +185,17 @@ fn load_game_from_file(file_name: &str) -> Game {
 }
 
 fn star1() -> std::io::Result<()> {
-    let game = load_game_from_file("../bingo-test.txt");
+    let mut game = load_game_from_file("../bingo.txt");
 
     println!("Game setup has {} numbers to call and {} boards", game.numbers.len(), game.boards.len());
 
-    // let answer = horiz_position * depth;
+    let winning_idx = game.play().unwrap();
+    let board = &game.boards[winning_idx];
 
-    // println!("⭐️ Analysis:");
-    // println!("   The valet parked your sub at position {}, depth {}", horiz_position, depth);
-    // println!("   Multipled, position x depth = {}", answer);
+    println!("⭐️ Analysis:");
+    println!("   Board {} won", winning_idx);
+    println!("   Sum of unmarked numbers = {}", board.sum_unmarked_numbers());
+    println!("   Final score = {}", board.score());
 
     Ok(())
 }
@@ -151,8 +206,6 @@ fn star2() -> std::io::Result<()> {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-
     const INPUT: &str = r#"7,4,9,5,11,17,23,2,0,14,21,24,10,16,13,6,15,25,12,22,18,20,8,19,3,26,1
 
 22 13 17 11  0
@@ -171,7 +224,7 @@ mod test {
 10 16 15  9 19
 18  8 23 26 20
 22 11 13  6  5
- 2  0 12  3  7"#;
+2  0 12  3  7"#;
 
     #[test]
     fn parse_game_setup() {
@@ -183,15 +236,21 @@ mod test {
         for (i, board) in game.boards.iter().enumerate() {
             assert_eq!(board.squares.len(), 25, "Board {} does not have 25 squares", i)
         }
+
+        assert_eq!(game.boards[0].sum_unmarked_numbers(), 300);
+        assert_eq!(game.boards[1].sum_unmarked_numbers(), 324);
+        assert_eq!(game.boards[2].sum_unmarked_numbers(), 325);
     }
 
     #[test]
-    fn play() {
+    fn play_star1() {
         let mut game = super::Game::parse_game_setup(INPUT);
         let winner_idx = game.play();
 
         assert!(winner_idx.is_some(), "There must be a winner or the players get angry");
 
-        assert_eq!(game.boards[winner_idx.unwrap()].score(), 4512);
+        let winning_board = &game.boards[winner_idx.unwrap()];
+        assert_eq!(winning_board.sum_unmarked_numbers(), 188);
+        assert_eq!(winning_board.score(), 4512);
     }
 }
