@@ -40,7 +40,7 @@ impl Board {
 
         // Check rows
         for (row, squares) in self.squares.chunks(5).enumerate() {
-            println!("Checking row {}: [{}, {}, {}, {}, {}]", row, squares[0].number, squares[1].number, squares[2].number, squares[3].number, squares[4].number);
+            print!("Checking row {}: [{}, {}, {}, {}, {}]...", row, squares[0].number, squares[1].number, squares[2].number, squares[3].number, squares[4].number);
 
             let mut row_all_marked = true;
             for i in 0..squares.len() {
@@ -50,27 +50,31 @@ impl Board {
             }
 
             if row_all_marked {
-                println!("🎉 Winner winner! Chicken dinner! Row {} is complete.", row);
+                println!("  ✅");
                 return true;
+            }
+            else {
+                println!(" ❌")
             }
         }
 
         // Check columns
         for col in 0..5 {
-            println!("Checking column {}", col);
+            print!("Checking column {}...", col);
 
             let mut col_all_marked = true;
             for row_squares in self.squares.chunks(5) {    
-                println!("   {}", row_squares[col].number);
                 if row_squares[col].marked == false {
-                    println!("   {} of column {} was not marked, killing it", row_squares[col].number, col);
                     col_all_marked = false;
                 }
             }
 
             if col_all_marked {
-                println!("🎉 Winner winner! Chicken dinner! Column {} is complete.", col);
+                println!(" ✅");
                 return true;
+            }
+            else {
+                println!(" ❌");
             }
         }
 
@@ -159,6 +163,68 @@ impl Game {
         None
     }
 
+    fn last_board_standing(&self) -> Option<usize> {
+        let mut last_idx:Option<usize> = None;
+        let mut incomplete_count = 0;
+
+        println!(">last_board_standing");
+
+        for (i, board) in self.boards.iter().enumerate() {
+            print!("  checking board {}...", i);
+            if !board.is_winner() {
+                incomplete_count += 1;
+                last_idx = Some(i);
+
+                println!(" ❌");
+            } 
+            else {
+                println!(" ✅");
+            }
+        }
+
+        // Assume there can only be one board last standing (no ties)
+        if incomplete_count == 1 {
+            return last_idx;
+        }
+
+        println!("< last_board_standing -> None");
+        None
+    }
+
+    // Plays the game until all boards have won. Returns the index of the last winning board, or None if we run out of numbers.
+    fn play_until_no_boards_left(&mut self) -> Option<usize> {
+        let mut last_board_idx:Option<usize> = None;
+        let mut all_boards_won = false;
+
+        for i in 0..self.numbers.len() {
+            let number = self.numbers[i];
+            println!("📣📣📣📣 CALLING – Step #{} of the game is now calling number {}", i, number);
+
+            self.mark_number_called(number);
+
+            match self.last_board_standing() {
+                Some(last_idx) => {
+                    println!("LAST BOARD STANDING assigned to {} after calling {}", last_idx, number);
+                    last_board_idx = Some(usize::try_from(last_idx).unwrap());
+                },
+                None => {
+                    println!("   ... no last board stadning...either cause they are all complete or there are multiple incomplete");
+                },
+            }
+
+            let incomplete_boards: usize = self.boards.iter().map(|b| if b.is_winner() {0} else {1} ).sum();
+
+            if incomplete_boards == 0 {
+                println!("All boards completed!");
+                self.last_called_number = Some(number);
+                break;
+            }
+        }
+
+        println!("All boards complete! Returning the last board index, {:?}", last_board_idx);
+        last_board_idx
+    }
+
     fn mark_number_called(&mut self, number:u32) {
         for i in 0..self.boards.len() {
             let board = &mut self.boards[i];
@@ -206,6 +272,18 @@ fn star1() -> std::io::Result<()> {
 }
 
 fn star2() -> std::io::Result<()> {
+    let mut game = load_game_from_file("../bingo.txt");
+
+    println!("Game setup has {} numbers to call and {} boards", game.numbers.len(), game.boards.len());
+
+    let last_idx = game.play_until_no_boards_left().unwrap();
+    let board = &game.boards[last_idx];
+
+    println!("⭐️⭐️ Analysis:");
+    println!("   Board {} was the last to win", last_idx);
+    println!("   Sum of unmarked numbers = {}", board.sum_unmarked_numbers());
+    println!("   Final score = {}", board.score(game.last_called_number.unwrap()));
+
     Ok(())
 }
 
@@ -342,5 +420,31 @@ const INPUT_COL_WINNER_TEST: &str = r#"7,4,9,5,11,17,23,2,0,14,21,24,10,16,13,6,
         let winner_idx = game.play().unwrap();
 
         assert_eq!(winner_idx, 0);
+    }
+
+    #[test]
+    fn play_game_2_official_data() {
+        let mut game = super::Game::parse_game_setup(INPUT_OFFICIAL_TEST);
+
+        assert_eq!(game.numbers.len(), 27);
+        assert_eq!(game.boards.len(), 3);
+
+        for (i, board) in game.boards.iter().enumerate() {
+            assert_eq!(board.squares.len(), 25, "Board {} does not have 25 squares", i)
+        }
+
+        assert_eq!(game.boards[0].sum_unmarked_numbers(), 300);
+        assert_eq!(game.boards[1].sum_unmarked_numbers(), 324);
+        assert_eq!(game.boards[2].sum_unmarked_numbers(), 325);
+
+        let last_idx = game.play_until_no_boards_left();
+
+        assert_eq!(last_idx.unwrap(), 1);
+
+        let last_board = &game.boards[last_idx.unwrap()];
+
+        assert_eq!(game.last_called_number.unwrap(), 13);
+        assert_eq!(last_board.sum_unmarked_numbers(), 148);
+        assert_eq!(last_board.score(game.last_called_number.unwrap()), 1924);
     }
 }
