@@ -26,12 +26,13 @@ struct Board {
 struct Game {
     numbers: Vec<u32>,
     boards: Vec<Board>,
+    last_called_number: Option<u32>,
 }
 
 impl Board {
     /// Calculate the score of the winning board
-    fn score(&self) -> u32 {
-        self.sum_unmarked_numbers() * 24
+    fn score(&self, last:u32) -> u32 {
+        self.sum_unmarked_numbers() * last
     }
 
     /// Look for a winning condition. Note that only horizontal and vertical rows are considered (no diagonals)
@@ -83,7 +84,7 @@ impl Board {
             let mut square = &mut self.squares[i];
             if square.number == number {
                 square.marked = true;
-                marked = true; // Repeating numbers shouldn't be allowed but we fail gracefully
+                marked = true; // Repeating numbers typically are not allowed but we continue as it wasn't explicitly stated
             }
         }
 
@@ -131,7 +132,7 @@ impl Game {
             boards.push(Board{squares});
         }
     
-        Game{numbers, boards}
+        Game{numbers, boards, last_called_number:None}
     }
 
     // Plays the game by calling each number in turn, and checking for a winner after each pass. Returns the index of the winning Board, if any.
@@ -145,7 +146,8 @@ impl Game {
             let winner_idx = self.check_for_winner();
             match winner_idx {
                 Some(idx) => {
-                    println!("Winner!");
+                    println!("Winner! Step #{} triggered the win when calling {}", i, number);
+                    self.last_called_number = Some(number);
                     return Some(idx);
                 }
                 None => {
@@ -198,7 +200,7 @@ fn star1() -> std::io::Result<()> {
     println!("⭐️ Analysis:");
     println!("   Board {} won", winning_idx);
     println!("   Sum of unmarked numbers = {}", board.sum_unmarked_numbers());
-    println!("   Final score = {}", board.score());
+    println!("   Final score = {}", board.score(game.last_called_number.unwrap()));
 
     Ok(())
 }
@@ -251,9 +253,9 @@ const INPUT_SHUFFLED_TEST: &str = r#"7,4,9,5,11,17,23,2,0,14,21,24,10,16,13,6,15
 
 const INPUT_ROW_WINNER_TEST: &str = r#"7,4,9,5,11,17,23,2,0,14,21,24,10,16,13,6,15,25,12,22,18,20,8,19,3,26,1
 
- 7  4  9  5 11
 18  8 23 26 20
 22 11 13  6  5
+7  4  9  5 11
 2  0 12  3  7
 21 17 24  04 14 
 
@@ -311,7 +313,7 @@ const INPUT_COL_WINNER_TEST: &str = r#"7,4,9,5,11,17,23,2,0,14,21,24,10,16,13,6,
 
         let winning_board = &game.boards[winner_idx.unwrap()];
         assert_eq!(winning_board.sum_unmarked_numbers(), 188);
-        assert_eq!(winning_board.score(), 4512);
+        assert_eq!(winning_board.score(game.last_called_number.unwrap()), 4512);
     }
 
     #[test]
@@ -323,7 +325,7 @@ const INPUT_COL_WINNER_TEST: &str = r#"7,4,9,5,11,17,23,2,0,14,21,24,10,16,13,6,
 
         let winning_board = &game.boards[winner_idx.unwrap()];
         assert_eq!(winning_board.sum_unmarked_numbers(), 188);
-        assert_eq!(winning_board.score(), 4512);
+        assert_eq!(winning_board.score(game.last_called_number.unwrap()), 4512);
     }
 
     #[test]
@@ -339,6 +341,6 @@ const INPUT_COL_WINNER_TEST: &str = r#"7,4,9,5,11,17,23,2,0,14,21,24,10,16,13,6,
         let mut game = super::Game::parse_game_setup(INPUT_COL_WINNER_TEST);
         let winner_idx = game.play().unwrap();
 
-        assert_eq!(winner_idx, 1);
+        assert_eq!(winner_idx, 0);
     }
 }
