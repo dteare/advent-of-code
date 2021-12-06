@@ -165,65 +165,50 @@ impl OceanFloor {
             println!("      ✅ walked horizontal vent {}", vent_line);
         }
         else {
-            if allow_diagonals == false {
-                println!("      💥 skipping diagonal for vent {}", vent_line);
+            if !allow_diagonals {
+                println!("      🙈 skipping diagonal vent {}", vent_line);
                 return;
             }
 
-            println!("      🚶🏻‍♀️ walking the diagonal");
+            // First set things up so we're always going left to right
+            let mut start = vent_line.start;
+            let mut end = vent_line.end;
+            if start.x > end.x {
+                println!("FLIPPING!");
+                start = vent_line.end;
+                end = vent_line.start;
+            }
+
+            println!("      🚶🏻‍♀️ walking diagonal for line {} from {} to {}", vent_line, start.x, end.x);
+            let mut slope:i32 = 1;
+            if start.y > end.y {
+                slope = -1;
+            }
+
+            let mut y = start.y;
+            for x in start.x .. end.x { // exclusive; we'll catch it at the end
+                println!("        @x={}, @y={}",x, y);
+                self.vent_layout[x][y] += 1;
+                
+                if slope == 1 {
+                    y += 1;
+                }
+                else {
+                    y -= 1;
+                }
+            }
+            self.vent_layout[end.x][end.y] += 1;
         }
     }
 
     fn navigate_horiz_and_vert_vents_to_complete_layout(&mut self) {
         println!("@navigate_horiz_and_vert_vents_to_complete_layout");
         self.init_layout();
+        let mut vents = self.vents.clone();
 
-        for (_i, vent_line) in self.vents.iter_mut().enumerate() {
+        for (_i, vent_line) in vents.iter_mut().enumerate() {
             println!("   walking the line {}", vent_line);
-            // Would love this but Rust is angry:
-            //    cannot borrow `*self` as mutable more than once at a time
-            // self.walk_line(*vent_line, false);
-
-            // TODO -- use walk_line instead when possible
-            if vent_line.start.x == vent_line.end.x {
-                let x = vent_line.start.x;
-                let mut y_start = vent_line.start.y;
-                let mut y_end = vent_line.end.y;
-    
-                if y_start > y_end {
-                    // Flip 'em
-                    y_start = vent_line.end.y;
-                    y_end = vent_line.start.y;
-                }
-    
-                for y in y_start .. y_end + 1 { // +1 to make it inclusive. i.e. "<="
-                    let current = self.vent_layout[x][y];
-                    self.vent_layout[x][y] = current + 1;
-                }
-                println!("      ✅ walked vertical {}", vent_line);
-            }
-            else if vent_line.start.y == vent_line.end.y {
-                let y = vent_line.start.y;
-                let mut x_start = vent_line.start.x;
-                let mut x_end = vent_line.end.x;
-    
-                if x_start > x_end {
-                    // Flip 'em
-                    x_start = vent_line.end.x;
-                    x_end = vent_line.start.x;
-                }
-    
-                for x in x_start .. x_end + 1 { // +1 to make it inclusive. i.e. "<="
-                    let current = self.vent_layout[x][y];
-                    self.vent_layout[x][y] = current + 1;
-                }
-                println!("      ✅ walked horizontal vent {}", vent_line);
-            }
-            else {
-                println!("      💥 skipping diagonal for vent {}", vent_line);
-            }
-    
-
+            self.walk_line(*vent_line, false);
             // println!("Layout after walking line #{} {}:\n{}", i, vent_line, self);
         }
 
@@ -233,78 +218,10 @@ impl OceanFloor {
     fn navigate_all_vents_to_complete_layout(&mut self) {
         println!("@navigate_all_vents_to_complete_layout");
         self.init_layout();
+        let mut vents = self.vents.clone();
 
-        for (_i, vent_line) in self.vents.iter().enumerate() {
-            // Would love this but Rust is angry:
-            //    cannot borrow `*self` as mutable more than once at a time
-            // self.walk_line(*vent_line, true);
-
-            // TODO -- use walk_line instead when possible
-            if vent_line.start.x == vent_line.end.x {
-                let x = vent_line.start.x;
-                let mut y_start = vent_line.start.y;
-                let mut y_end = vent_line.end.y;
-    
-                if y_start > y_end {
-                    // Flip 'em
-                    y_start = vent_line.end.y;
-                    y_end = vent_line.start.y;
-                }
-    
-                for y in y_start .. y_end + 1 { // +1 to make it inclusive. i.e. "<="
-                    let current = self.vent_layout[x][y];
-                    self.vent_layout[x][y] = current + 1;
-                }
-                println!("      ✅ walked vertical {}", vent_line);
-            }
-            else if vent_line.start.y == vent_line.end.y {
-                let y = vent_line.start.y;
-                let mut x_start = vent_line.start.x;
-                let mut x_end = vent_line.end.x;
-    
-                if x_start > x_end {
-                    // Flip 'em
-                    x_start = vent_line.end.x;
-                    x_end = vent_line.start.x;
-                }
-    
-                for x in x_start .. x_end + 1 { // +1 to make it inclusive. i.e. "<="
-                    let current = self.vent_layout[x][y];
-                    self.vent_layout[x][y] = current + 1;
-                }
-                println!("      ✅ walked horizontal vent {}", vent_line);
-            }
-            else {
-                // First set things up so we're always going left to right
-                let mut start = vent_line.start;
-                let mut end = vent_line.end;
-                if start.x > end.x {
-                    println!("FLIPPING!");
-                    start = vent_line.end;
-                    end = vent_line.start;
-                }
-
-                println!("      🚶🏻‍♀️ walking diagonal for line {} from {} to {}", vent_line, start.x, end.x);
-                let mut slope:i32 = 1;
-                if start.y > end.y {
-                    slope = -1;
-                }
-
-                let mut y = start.y;
-                for x in start.x .. end.x { // exclusive; we'll catch it at the end
-                    println!("        @x={}, @y={}",x, y);
-                    self.vent_layout[x][y] += 1;
-                    
-                    if slope == 1 {
-                        y += 1;
-                    }
-                    else {
-                        y -= 1;
-                    }
-                }
-                self.vent_layout[end.x][end.y] += 1;
-            }
-
+        for (_i, vent_line) in vents.iter().enumerate() {
+            self.walk_line(*vent_line, true);
             // println!("Layout after walking line #{} {}:\n{}", i, vent_line, self);
         }
 
