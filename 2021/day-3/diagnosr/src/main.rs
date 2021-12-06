@@ -67,6 +67,7 @@ fn star1() -> std::io::Result<()> {
     println!("Parsed gamma vec {} as {} (decimal)", epsilon_vec.join(""), epsilon_rate);
 
     // This would have been perfect and was super nice when we knew the number of columns a priori. How can I make this dynamic?
+    // Advice from Future Dave: So, remember (2^n - 1) in decimal maps to n set bits in binary. You could calculate the number of bits (n) earlier on and here performed `!gamma_rate & (2^n-1)`
     // let epsilon_rate = !(gamma_rate) & 0b11111;
 
 
