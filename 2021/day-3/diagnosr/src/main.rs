@@ -4,7 +4,7 @@ use std::io::prelude::*;
 fn main() -> std::io::Result<()> {
     println!("Advent of Code day 3! 🙌");
 
-    star1()?;
+    // star1()?;
     println!("\n\n\n---------------------------------------------------\n\n");
     star2()?;
     Ok(())
@@ -81,6 +81,137 @@ fn star1() -> std::io::Result<()> {
     Ok(())
 }
 
+fn find_o2_gen_rating(values: &Vec<u32>, max_bits: u32) -> u32 {
+    let mut remaining = values.clone();
+    let mut bit = max_bits - 1; // bits are zero indexed
+
+    while true {
+
+        let mut ones = 0;
+        let mut zeroes = 0;
+        for (i, value) in remaining.iter_mut().enumerate() {
+            println!("Looking at bit #{} in {:#b}", bit, value);
+
+            if *value & (0b1 << bit) != 0 {
+                println!("   bit #{} is a 1", bit);
+                ones += 1;
+            }
+            else {
+                println!("   bit #{} is a 0", bit);
+                zeroes += 1;
+            }
+        }
+
+        if ones >= zeroes {
+            // Keep only those values that have a ONE in this bit position
+            let pre_len = remaining.len();
+            remaining = remaining.into_iter().filter(|&v|v & (0b1 << bit) != 0).collect::<Vec<u32>>();
+            println!("Went from {} to {} after removing values with a 0 at bit #{}", pre_len, remaining.len(), bit);
+        }
+        else {
+            let pre_len = remaining.len();
+            remaining = remaining.into_iter().filter(|&v|v & (0b1 << bit) == 0).collect::<Vec<u32>>();
+            println!("Went from {} to {} after removing values with a ONE at bit #{}", pre_len, remaining.len(), bit);
+        }
+
+        if remaining.len() == 1 {
+            break;
+        }
+        else if remaining.len() == 0 {
+            panic!("💥💥💥 Ran out of numbers before a _single_ one was found");
+        }
+
+        if bit > 0 {
+            bit -= 1;
+        }
+        else {
+            panic!("💥💥💥 RAN OUT OF BITS TO CONSIDER");
+        }
+    }
+
+    println!("After find_o2_gen_rating while loop:");
+    println!("   bit: {}", bit);
+    println!("   #remaining: {}", remaining.len());
+    println!("   remaining value: {}", remaining[0]);
+
+    return remaining[0];
+}
+
+fn find_co2_scrubber_rating(values: &Vec<u32>, max_bits: u32) -> u32 {
+    let mut remaining = values.clone();
+    let mut bit = max_bits - 1; // bits are zero indexed
+
+    while true {
+        let mut ones = 0;
+        let mut zeroes = 0;
+        for (i, value) in remaining.iter_mut().enumerate() {
+            println!("Looking at bit #{} in {:#b}", bit, value);
+
+            if *value & (0b1 << bit) != 0 {
+                println!("   bit #{} is a 1", bit);
+                ones += 1;
+            }
+            else {
+                println!("   bit #{} is a 0", bit);
+                zeroes += 1;
+            }
+        }
+
+        if ones >= zeroes {
+            let pre_len = remaining.len();
+            remaining = remaining.into_iter().filter(|&v|v & (0b1 << bit) == 0).collect::<Vec<u32>>();
+            println!("Went from {} to {} after removing values with a ONE at bit #{}", pre_len, remaining.len(), bit);
+        }
+        else {
+            let pre_len = remaining.len();
+            remaining = remaining.into_iter().filter(|&v|v & (0b1 << bit) != 0).collect::<Vec<u32>>();
+            println!("Went from {} to {} after removing values with a 0 at bit #{}", pre_len, remaining.len(), bit);
+        }
+
+        if remaining.len() == 1 {
+            break;
+        }
+        else if remaining.len() == 0 {
+            panic!("💥💥💥 Ran out of numbers before a _single_ one was found");
+        }
+
+        if bit > 0 {
+            bit -= 1;
+        }
+        else {
+            panic!("💥💥💥 RAN OUT OF BITS TO CONSIDER");
+        }
+    }
+
+    println!("After find_o2_gen_rating while loop:");
+    println!("   bit: {}", bit);
+    println!("   #remaining: {}", remaining.len());
+    println!("   remaining value: {}", remaining[0]);
+
+    return remaining[0];
+}
+
 fn star2() -> std::io::Result<()> {
+    let mut input = File::open("../diagnostics.txt")?;
+    // let bit_count = 5; // test is 5 bit
+    let bit_count = 12;
+
+    let mut input_buffer = String::new();
+    input.read_to_string(&mut input_buffer)?;
+
+    let lines: Vec<&str> = input_buffer.split('\n').collect();
+    let values = lines.iter().map(|l| u32::from_str_radix(l, 2).unwrap() ).collect::<Vec<u32>>();
+
+    let oxygen_gen_rating = find_o2_gen_rating(&values, bit_count);
+    let co2_scrubber_rating = find_co2_scrubber_rating(&values, bit_count);    
+
+    let life_support_rating = oxygen_gen_rating * co2_scrubber_rating;
+
+    println!("⭐️⭐️ Analysis:");
+    println!("   Number of line in input: {}", lines.len());
+    println!("   Oxygen generator rating: {}", oxygen_gen_rating);
+    println!("   CO2 scrubber rating: {}", co2_scrubber_rating);
+    println!("   Life support rating: {}", life_support_rating);
+
     Ok(())
 }
