@@ -3,7 +3,7 @@
 #[derive(Debug, PartialEq)]
 enum NavSubsystemLineSyntax {
     Valid,
-    Incomplete,
+    Incomplete(Vec<char>, usize),
     Corrupted(usize),
 }
 
@@ -67,11 +67,34 @@ fn parse_nav_subsystem_line(input: &str) -> NavSubsystemLineSyntax {
     }
 
     if opening_chunks.len() == 0 {
-        NavSubsystemLineSyntax::Valid
+        return NavSubsystemLineSyntax::Valid
     }
-    else {
-        NavSubsystemLineSyntax::Incomplete
+
+    let mut completion_score: usize = 0;
+    let mut missing_completions: Vec<char> = Vec::new();
+    let closer_for = std::collections::HashMap::from([
+        ('(', ')'),
+        ('[', ']'),
+        ('{', '}'),
+        ('<', '>'),
+    ]);
+    let completion_scores = std::collections::HashMap::from([
+        (')', 1),
+        (']', 2),
+        ('}', 3),
+        ('>', 4),
+    ]);
+
+    println!("Incomplete line; remaining chunks to close: {:?}", opening_chunks);
+    for opener in opening_chunks.iter().rev() {
+        let required_closer = closer_for.get(opener).unwrap();
+        missing_completions.push(*required_closer);
+
+        completion_score = completion_score * 5;
+        completion_score += completion_scores.get(required_closer).unwrap();
     }
+
+    NavSubsystemLineSyntax::Incomplete(missing_completions, completion_score)
 }
 struct Puzzle {
     lines: Vec<String>,
@@ -105,6 +128,26 @@ impl Puzzle {
 
         result
     }
+
+    fn part_2(&self) -> usize {
+        let mut autocomplete_scores:Vec<usize> = Vec::new();
+        for (i, line) in self.lines.iter().enumerate() {
+            let syntax = parse_nav_subsystem_line(line.as_str());
+
+            match syntax {
+                NavSubsystemLineSyntax::Incomplete(_autocomplete, score) => {
+                    println!("Line {} is incompelte with an autocorrect score of {}", i, score);
+                    autocomplete_scores.push(score);
+                },
+                _ => {}
+            }
+        }
+
+        autocomplete_scores.sort();
+
+        let middle_index = autocomplete_scores.len() / 2;
+        autocomplete_scores[middle_index]
+    }
 }
 
 pub fn read_stdin() -> Result<String, std::io::Error> {
@@ -117,6 +160,7 @@ fn main() -> Result<(), std::io::Error> {
     let puzzle = Puzzle::parse(&read_stdin()?);
 
     println!("Part 1: {}", puzzle.part_1());
+    println!("Part 2: {}", puzzle.part_2());
 
     Ok(())
 }
@@ -166,16 +210,22 @@ mod test {
         verify_syntax("<{([([[(<>()){}]>(<<{{", NavSubsystemLineSyntax::Corrupted(25137));
 
 
-        verify_syntax("[({(<(())[]>[[{[]{<()<>>", NavSubsystemLineSyntax::Incomplete); 
-        verify_syntax("[(()[<>])]({[<{<<[]>>(", NavSubsystemLineSyntax::Incomplete); 
-        verify_syntax("(((({<>}<{<{<>}{[]{[]{}", NavSubsystemLineSyntax::Incomplete); 
-        verify_syntax("{<[[]]>}<{[{[{[]{()[[[]", NavSubsystemLineSyntax::Incomplete); 
-        verify_syntax("<{([{{}}[<[[[<>{}]]]>[]]", NavSubsystemLineSyntax::Incomplete); 
+        verify_syntax("[({(<(())[]>[[{[]{<()<>>", NavSubsystemLineSyntax::Incomplete(vec!['}', '}', ']', ']', ')', '}',')', ']'], 288957));
+        verify_syntax("[(()[<>])]({[<{<<[]>>(", NavSubsystemLineSyntax::Incomplete(vec![')','}','>',']','}',')'], 5566)); 
+        verify_syntax("(((({<>}<{<{<>}{[]{[]{}", NavSubsystemLineSyntax::Incomplete(vec!['}','}','>','}','>',')',')',')',')'], 1480781)); 
+        verify_syntax("{<[[]]>}<{[{[{[]{()[[[]", NavSubsystemLineSyntax::Incomplete(vec![']',']','}','}',']','}',']','}','>'], 995444)); 
+        verify_syntax("<{([{{}}[<[[[<>{}]]]>[]]", NavSubsystemLineSyntax::Incomplete(vec![']',')','}','>'], 294)); 
     }
 
     #[test]
     fn part_1() {
         let puzzle = super::Puzzle::parse(INPUT);
         assert_eq!(puzzle.part_1(), 26397);
+    }
+
+    #[test]
+    fn part_2() {
+        let puzzle = super::Puzzle::parse(INPUT);
+        assert_eq!(puzzle.part_2(), 288957);
     }
 }
