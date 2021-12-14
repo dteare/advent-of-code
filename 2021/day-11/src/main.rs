@@ -145,8 +145,24 @@ impl Puzzle {
         self.flash_count
     }
 
-    fn part_2(&self) -> usize {
-        0
+    fn part_2(&mut self) -> usize {
+        loop {
+            self.step(1);
+
+            let mut simultaneous_flash_occurred = true;
+            for line in self.consortium.iter_mut() {
+                for octopus in line.iter_mut() {
+                    if octopus.energy != 0 {
+                        simultaneous_flash_occurred = false;
+                    }
+                }
+            }
+
+            if simultaneous_flash_occurred {
+                break;
+            }
+        }
+        self.step
     }
 }
 
@@ -175,7 +191,7 @@ fn main() -> Result<(), std::io::Error> {
     let mut puzzle = Puzzle::parse(&read_stdin()?);
 
     println!("Part 1: {}", puzzle.part_1());
-//    println!("Part 2: {}", puzzle.part_2());
+    println!("Part 2: {}", puzzle.part_2());
 
     Ok(())
 }
@@ -582,5 +598,67 @@ mod test {
         "#,
         );
         assert_eq!(1656, puzzle.flash_count);
+    }
+
+    #[test]
+    fn part_2() {
+        let mut puzzle = super::Puzzle::parse(SAMPLE);
+        assert_eq!(195, puzzle.part_2());
+    }
+
+    #[test]
+    fn part_2_validation_of_simultaneous_flash() {
+        let mut puzzle = super::Puzzle::parse(SAMPLE);
+
+        puzzle.step(193);
+        assert_eq_energy_levels(
+            &puzzle,
+            r#"
+            5877777777
+            8877777777
+            7777777777
+            7777777777
+            7777777777
+            7777777777
+            7777777777
+            7777777777
+            7777777777
+            7777777777
+       "#,
+        );
+
+        puzzle.step(1);
+        assert_eq_energy_levels(
+            &puzzle,
+            r#"
+            6988888888
+            9988888888
+            8888888888
+            8888888888
+            8888888888
+            8888888888
+            8888888888
+            8888888888
+            8888888888
+            8888888888
+       "#,
+        );
+
+        puzzle.step(1);
+        assert_eq_energy_levels(
+            &puzzle,
+            r#"
+            0000000000
+            0000000000
+            0000000000
+            0000000000
+            0000000000
+            0000000000
+            0000000000
+            0000000000
+            0000000000
+            0000000000
+       "#,
+        );
     }
 }
