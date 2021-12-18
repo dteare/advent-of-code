@@ -29,8 +29,7 @@ impl Puzzle {
         }
 
         println!("Parsing <{}>", input);
-        let mut paper: Vec<Vec<bool>> = Vec::with_capacity(15);
-        paper.resize(15, vec![false; 11]);
+        let mut points: Vec<Point> = Vec::new();
         let mut folds: Vec<Fold> = Vec::new();
         let mut mode = ParseMode::Points;
 
@@ -50,7 +49,7 @@ impl Puzzle {
                     let y = parts.next().unwrap().parse::<usize>().unwrap();
 
                     println!("Parsed point {} as ({},{})", trimmed, x, y);
-                    paper[y][x] = true;
+                    points.push(Point{x, y});
                 }
                 ParseMode::Folds => {
                     println!("Parsing fold <{}> on =", trimmed);
@@ -70,6 +69,24 @@ impl Puzzle {
                     });
                 }
             }
+        }
+
+        let mut max_x:usize = 0;
+        let mut max_y:usize = 0;
+        for pt in points.iter() {
+            if pt.x > max_x {
+                max_x = pt.x;
+            }
+            if pt.y > max_y {
+                max_y = pt.y;
+            }
+        }
+
+        let mut paper: Vec<Vec<bool>> = Vec::with_capacity(max_y+1);
+        paper.resize(max_y+1, vec![false; max_x+1]);
+
+        for pt in points.iter() {
+            paper[pt.y][pt.x] = true;
         }
 
         Puzzle { paper, folds }
@@ -153,8 +170,9 @@ impl Puzzle {
         self.dot_count()
     }
 
-    fn part_2(&mut self) -> usize {
-        0
+    fn part_2(&mut self) -> String {
+        self.complete();
+        self.to_string()
     }
 }
 
@@ -187,7 +205,7 @@ fn main() -> Result<(), std::io::Error> {
     let mut puzzle = Puzzle::parse(&read_stdin()?);
 
     println!("Part 1: {}", puzzle.part_1());
-    println!("Part 2: {}", puzzle.part_2());
+    println!("Part 2:\n{}", puzzle.part_2());
 
     Ok(())
 }
