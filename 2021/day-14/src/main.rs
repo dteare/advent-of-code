@@ -13,13 +13,12 @@ impl Puzzle {
             Pairs,
         }
 
-        println!("Parsing <{}>", input);
-        let mut polymer: Vec<char> = Vec::new();
+        // println!("Parsing <{}>", input);
+        let mut polymer: Vec<char> = Vec::with_capacity(usize::MAX/1024000);
         let mut pairs: HashMap<String, char> = HashMap::new();
         let mut mode = ParseMode::Template;
 
         for (_i, line_str) in input.trim().split("\n").enumerate() {
-            println!("<{}>", line_str);
             let trimmed = line_str.trim();
             if trimmed.len() == 0 {
                 mode = ParseMode::Pairs;
@@ -28,13 +27,11 @@ impl Puzzle {
 
             match mode {
                 ParseMode::Template => {
-                    println!("Parsing template <{}>", trimmed);
                     for c in trimmed.chars() {
                         polymer.push(c);
                     }
                 }
                 ParseMode::Pairs => {
-                    println!("Parsing insertion pair <{}>", trimmed);
                     let mut parts = trimmed.split(" -> ");
                     let pair = parts.next().unwrap();
                     let insert = parts.next().unwrap();
@@ -47,16 +44,17 @@ impl Puzzle {
     }
 
     fn step(&mut self, n:usize) {
-        for _ in 0..n {
+        for stepper in 0..n {
+            println!("@step {} with {} polymers", stepper, self.polymer.len());
             for i in (1..self.polymer.len()).rev() {
-                println!("Looking at {} and {}: {}-{}", i-1, i, self.polymer[i-1], self.polymer[i]);
+                // println!("Looking at {} and {}: {}-{}", i-1, i, self.polymer[i-1], self.polymer[i]);
     
                 let mut template_pair = self.polymer[i-1].to_string();
                 template_pair.push(self.polymer[i]);
     
                 let mut insertion:Option<char> = None;
                 for (pair,insert) in self.pairs.iter() {
-                    println!("matching {} against {}", pair, template_pair);
+                    // println!("matching {} against {}", pair, template_pair);
     
                     if template_pair == *pair {
                         insertion = Some(*insert);
@@ -109,7 +107,22 @@ impl Puzzle {
     }
 
     fn part_2(&mut self) -> usize {
-        0
+        self.step(40);
+        let count = self.count();
+
+        let mut most_common: (char, usize) = ('_', 0);
+        let mut least_common: (char, usize) = ('_', usize::MAX);
+
+        for (p, c) in count.iter() {
+            if *c > most_common.1 {
+                most_common = (*p, *c);
+            }
+            if *c < least_common.1 {
+                least_common = (*p, *c);
+            }
+        }
+
+        most_common.1 - least_common.1
     }
 }
 
@@ -203,5 +216,22 @@ mod test {
     fn part_1() {
         let mut puzzle = super::Puzzle::parse(SAMPLE);
         assert_eq!(1588, puzzle.part_1());
+    }
+
+    #[test]
+    fn baby_steps_2() {
+        let mut puzzle = super::Puzzle::parse(SAMPLE);
+
+        // Never returns. Hard to fight exponential problems with linear logic. Must. Get. Smrtr. 🤔
+        puzzle.step(40);
+        let count = puzzle.count();
+        assert_eq!(count[&'B'], 2192039569602);
+        assert_eq!(count[&'H'], 3849876073);
+    }
+
+    #[test]
+    fn part_2() {
+        let mut puzzle = super::Puzzle::parse(SAMPLE);
+        assert_eq!(2188189693529, puzzle.part_2());
     }
 }
