@@ -1,0 +1,16 @@
+[workspace]
+members = [
+	"day-01/depthr",
+	"day-02/navr",
+	"day-03/diagnosr",
+	"day-04/bingr",
+	"day-05/mappr",
+	"day-06/fishr",
+	"day-07/crabr",
+	"day-09/low-point",
+	"day-10",
+	"day-11",
+	"day-13",
+	"day-14",
+	"day-15",
+]
