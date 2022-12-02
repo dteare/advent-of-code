@@ -4,8 +4,10 @@ struct Puzzle {
     elves: Vec<Elf>,
 }
 
+#[derive(Clone)]
 struct Elf {
     inventory: Vec<usize>,
+    total_calories: usize,
 }
 
 impl Puzzle {
@@ -18,7 +20,11 @@ impl Puzzle {
             let trimmed = line_str.trim();
             if trimmed.len() == 0 {
                 // New line signifies end of the current Elf's item list
-                elves.push(Elf { inventory });
+                let total_calories = inventory.iter().sum::<usize>();
+                elves.push(Elf {
+                    inventory,
+                    total_calories,
+                });
                 inventory = Vec::new();
                 continue;
             }
@@ -28,7 +34,11 @@ impl Puzzle {
         }
 
         // Not all files will end with a new line. Add the last Elf if appropriate
-        elves.push(Elf { inventory });
+        let total_calories = inventory.iter().sum::<usize>();
+        elves.push(Elf {
+            inventory,
+            total_calories,
+        });
 
         Puzzle { elves }
     }
@@ -37,16 +47,15 @@ impl Puzzle {
         let mut max_calories: usize = 0;
 
         for (i, elf) in self.elves.iter().enumerate() {
-            let calories = elf.inventory.iter().sum::<usize>();
             println!(
                 "Elf #{} has {} items with a total of {} calories",
                 i,
                 elf.inventory.len(),
-                calories
+                elf.total_calories
             );
 
-            if calories > max_calories {
-                max_calories = calories;
+            if elf.total_calories > max_calories {
+                max_calories = elf.total_calories;
             }
         }
 
@@ -54,7 +63,18 @@ impl Puzzle {
     }
 
     fn part_2(&mut self) -> usize {
-        2
+        // Sort elves by the total calories they are carrying, *ascending*
+        let mut sorted_elves = self.elves.clone();
+        sorted_elves.sort_by(|a, b| a.total_calories.cmp(&b.total_calories));
+
+        if sorted_elves.len() < 3 {
+            panic!("Not enough elves to find the top 3");
+        }
+
+        sorted_elves[sorted_elves.len() - 3..sorted_elves.len()]
+            .iter()
+            .map(|e| e.total_calories)
+            .sum::<usize>()
     }
 }
 
@@ -94,7 +114,7 @@ fn main() -> Result<(), std::io::Error> {
     let mut puzzle = Puzzle::parse(&read_stdin()?);
 
     println!("Part 1: {}", puzzle.part_1());
-    //    println!("Part 2: {}", puzzle.part_2());
+    println!("Part 2: {}", puzzle.part_2());
 
     Ok(())
 }
@@ -137,9 +157,9 @@ mod test {
         assert_eq!(24000, puzzle.part_1());
     }
 
-    // #[test]
-    // fn part_2() {
-    //     let mut puzzle = super::Puzzle::parse(SAMPLE);
-    //     assert_eq!(12345, puzzle.part_2());
-    // }
+    #[test]
+    fn part_2() {
+        let mut puzzle = super::Puzzle::parse(SAMPLE);
+        assert_eq!(45000, puzzle.part_2());
+    }
 }
