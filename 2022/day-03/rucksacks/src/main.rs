@@ -1,13 +1,17 @@
+#![feature(array_chunks)]
+
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::collections::VecDeque;
 struct Puzzle {
     rucksacks: Vec<Rucksack>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct Rucksack {
     comparment_1: HashMap<char, usize>,
     comparment_2: HashMap<char, usize>,
+    all_items: HashSet<char>,
 }
 
 // todo someday maybe
@@ -18,18 +22,22 @@ struct Rucksack {
 //     }
 // }
 
-fn parse_items(input: &str) -> (Vec<char>, Vec<char>) {
+fn parse_items(input: &str) -> (Vec<char>, Vec<char>, Vec<char>) {
     let parts = input.chars();
-    let mut all = VecDeque::from_iter(parts);
+    let mut items = VecDeque::from_iter(parts);
 
     let mut left: Vec<char> = Vec::new();
     let mut right: Vec<char> = Vec::new();
 
-    while all.len() > 0 {
-        left.push(all.pop_front().unwrap());
-        right.push(all.pop_back().unwrap());
+    while items.len() > 0 {
+        left.push(items.pop_front().unwrap());
+        right.push(items.pop_back().unwrap());
     }
-    (left, right)
+    (
+        left.clone(),
+        right.clone(),
+        left.into_iter().chain(right).collect(),
+    )
 }
 
 impl Puzzle {
@@ -40,7 +48,7 @@ impl Puzzle {
         for (_i, line_str) in input.trim().split("\n").enumerate() {
             let _trimmed = line_str.trim();
 
-            let (items1, items2) = parse_items(line_str);
+            let (items1, items2, all) = parse_items(line_str);
 
             let coalesced_items1 = items1.into_iter().fold(HashMap::new(), |mut acc, c| {
                 *acc.entry(c).or_insert(0) += 1;
@@ -55,6 +63,7 @@ impl Puzzle {
             rucksacks.push(Rucksack {
                 comparment_1: coalesced_items1,
                 comparment_2: coalesced_items2,
+                all_items: HashSet::from(all.into_iter().collect::<HashSet<char>>()),
             });
         }
 
@@ -67,12 +76,35 @@ impl Puzzle {
             .fold(0, |acc, r| acc + r.duplicate().1)
     }
 
+    fn item_in_common(&self, rucksacks: &[Rucksack]) -> (char, usize) {
+        let overlap = rucksacks[0].all_items.intersection(&rucksacks[1].all_items);
+
+        for c in overlap.into_iter() {
+            if rucksacks[2].all_items.contains(c) {
+                return (*c, rucksacks[2].priority(*c));
+            }
+        }
+
+        panic!("There was no item in common for this group of rucksacks");
+    }
+
+    fn group_badge_priority_sum(&self) -> usize {
+        let mut sum = 0;
+
+        for group in self.rucksacks.array_chunks::<3>() {
+            let (_, priority) = self.item_in_common(group);
+            sum += priority;
+        }
+
+        sum
+    }
+
     fn part_1(&self) -> usize {
         self.priorty_sum()
     }
 
     fn part_2(&self) -> usize {
-        0
+        self.group_badge_priority_sum()
     }
 }
 
@@ -155,13 +187,17 @@ CrZsJsPPZsGzwwsLwLmpwMDw
         assert_eq!(puzzle.rucksacks[3].duplicate(), ('v', 22));
         assert_eq!(puzzle.rucksacks[4].duplicate(), ('t', 20));
         assert_eq!(puzzle.rucksacks[5].duplicate(), ('s', 19));
+    }
 
+    #[test]
+    fn part_1() {
+        let puzzle = super::Puzzle::parse(SAMPLE);
         assert_eq!(puzzle.priorty_sum(), 157);
     }
 
     #[test]
-    fn part_1() {}
-
-    #[test]
-    fn part_2() {}
+    fn part_2() {
+        let puzzle = super::Puzzle::parse(SAMPLE);
+        assert_eq!(puzzle.group_badge_priority_sum(), 70);
+    }
 }
